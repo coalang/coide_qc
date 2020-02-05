@@ -20,6 +20,7 @@ ads--CDockAreaWidget
     border: 1px solid white;
 }
 
+ads--CDockAreaWidget #customMenuButton::menu-indicator,
 ads--CDockAreaWidget #tabsMenuButton::menu-indicator
 {
     image: none;

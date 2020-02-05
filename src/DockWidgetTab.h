@@ -138,9 +138,19 @@ public:
 	bool isClosable() const;
 
 	/**
+	 * This function returns true if the assigned dock widget is detachable
+	 */
+	bool isDetachable() const;
+
+	/**
 	* Track event ToolTipChange and set child ToolTip 
 	*/
 	virtual bool event(QEvent *e) override;
+
+	/**
+	 * Creates a returns the list of context menu actions for this tab.
+	 */
+	QList<QAction*> createContextMenuActions(QWidget* parent);
 
 
 public slots:

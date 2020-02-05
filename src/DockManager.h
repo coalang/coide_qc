@@ -160,7 +160,7 @@ public:
         DockAreaHasUndockButton = 0x4000,     //!< If the flag is set each dock area has an undock button
         DockAreaHasTabsMenuButton = 0x8000,     //!< If the flag is set each dock area has a tabs menu button
         DockAreaHideDisabledButtons = 0x10000,    //!< If the flag is set disabled dock area buttons will not appear on the tollbar at all (enabling them will bring them back)
-
+        DockAreaHasCustomMenuButton = 0x20000, //!< if this flag is set, an additional menu button is shown for a custom menu
 
         DefaultDockAreaButtons = DockAreaHasCloseButton
 							   | DockAreaHasUndockButton

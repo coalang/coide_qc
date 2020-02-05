@@ -65,6 +65,7 @@ struct DockAreaTitleBarPrivate
 	QPointer<tTitleBarButton> TabsMenuButton;
 	QPointer<tTitleBarButton> UndockButton;
 	QPointer<tTitleBarButton> CloseButton;
+	QPointer<tTitleBarButton> CustomMenuButton;
 	QBoxLayout* TopLayout;
 	CDockAreaWidget* DockArea;
 	CDockAreaTabBar* TabBar;
@@ -101,6 +102,11 @@ struct DockAreaTitleBarPrivate
 	{
 		return CDockManager::configFlags().testFlag(Flag);
 	}
+
+	/**
+	 * Create button for custom menu
+	 */
+	void createCustomMenuButton();
 };// struct DockAreaTitleBarPrivate
 
 
@@ -166,6 +172,39 @@ DockAreaTitleBarPrivate::DockAreaTitleBarPrivate(CDockAreaTitleBar* _public) :
 
 
 //============================================================================
+void DockAreaTitleBarPrivate::createCustomMenuButton()
+{
+	QSizePolicy ButtonSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
+
+	CustomMenuButton = new CTitleBarButton(testConfigFlag(CDockManager::DockAreaHasCustomMenuButton));
+	CustomMenuButton->setObjectName("customMenuButton");
+	CustomMenuButton->setAutoRaise(true);
+	CustomMenuButton->setPopupMode(QToolButton::InstantPopup);
+
+	// First we try to use custom icons if available
+	QIcon Icon = CDockManager::iconProvider().customIcon(ads::eIcon::DockAreaCustomMenuIcon);
+	if (Icon.isNull())
+	{
+		// use default menu icon
+		QPixmap normalPixmap(":/ads/images/custom-menu-button.svg");
+		Icon.addPixmap(internal::createTransparentPixmap(normalPixmap, 0.25), QIcon::Disabled);
+		Icon.addPixmap(normalPixmap, QIcon::Normal);
+	}
+	CustomMenuButton->setIcon(Icon);
+
+	QMenu* Menu = new QMenu(CustomMenuButton);
+#ifndef QT_NO_TOOLTIP
+	Menu->setToolTipsVisible(true);
+#endif
+	_this->connect(Menu, &QMenu::aboutToShow, _this, &CDockAreaTitleBar::onCustomMenuAboutToShow);
+	CustomMenuButton->setMenu(Menu);
+	internal::setToolTip(CustomMenuButton, QObject::tr("Options"));
+	CustomMenuButton->setSizePolicy(ButtonSizePolicy);
+	TopLayout->addWidget(CustomMenuButton, 0);
+}
+
+
+//============================================================================
 void DockAreaTitleBarPrivate::createButtons()
 {
 	QSizePolicy ButtonSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
@@ -188,6 +227,11 @@ void DockAreaTitleBarPrivate::createButtons()
 	_this->connect(TabsMenuButton->menu(), SIGNAL(triggered(QAction*)),
 		SLOT(onTabsMenuActionTriggered(QAction*)));
 
+	// custom menu button
+	if (testConfigFlag(CDockManager::DockAreaHasCustomMenuButton))
+	{
+		createCustomMenuButton();
+	}
 
 	// Undock button
 	UndockButton = new CTitleBarButton(testConfigFlag(CDockManager::DockAreaHasUndockButton));
@@ -407,6 +451,41 @@ void CDockAreaTitleBar::showContextMenu(const QPoint& pos)
 	Action->setEnabled(d->DockArea->features().testFlag(CDockWidget::DockWidgetClosable));
 	Menu.addAction(tr("Close Other Areas"), d->DockArea, SLOT(closeOtherAreas()));
 	Menu.exec(mapToGlobal(pos));
+}
+
+
+//============================================================================
+void CDockAreaTitleBar::onCustomMenuAboutToShow()
+{
+	QMenu* menu = d->CustomMenuButton->menu();
+	menu->clear();
+
+	CDockWidgetTab* currentTab = d->TabBar->currentTab();
+	if (!currentTab)
+	{
+		return;
+	}
+
+	CDockWidget* currentDockWidget = currentTab->dockWidget();
+	if (!currentDockWidget)
+	{
+		return;
+	}
+
+	QWidget* currentContentWidget = currentDockWidget->widget();
+	if (!currentContentWidget)
+	{
+		return;
+	}
+
+	menu->addActions(currentContentWidget->actions());
+
+	if (!menu->actions().isEmpty())
+	{
+		menu->addSeparator();
+	}
+
+	menu->addActions(currentTab->createContextMenuActions(menu));
 }
 
 

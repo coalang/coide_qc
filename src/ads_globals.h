@@ -116,6 +116,7 @@ enum eIcon
 	DockAreaMenuIcon,  //!< DockAreaMenuIcon
 	DockAreaUndockIcon,//!< DockAreaUndockIcon
 	DockAreaCloseIcon, //!< DockAreaCloseIcon
+	DockAreaCustomMenuIcon,
 
 	IconCount,         //!< just a delimiter for range checks
 };

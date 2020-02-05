@@ -61,6 +61,7 @@ private slots:
 	void onTabsMenuActionTriggered(QAction* Action);
 	void onCurrentTabChanged(int Index);
 	void showContextMenu(const QPoint& pos);
+	void onCustomMenuAboutToShow();
 
 public slots:
 	/**

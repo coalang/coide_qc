@@ -437,6 +437,9 @@ CMainWindow::CMainWindow(QWidget *parent) :
 	// uncomment the following line if you don't want disabled buttons to appear on DockArea's title bar
 	//CDockManager::setConfigFlag(CDockManager::DockAreaHideDisabledButtons, true);
 
+   // uncomment the following line to show the custom menu
+	CDockManager::setConfigFlag(CDockManager::DockAreaHasCustomMenuButton, true);
+
 	// Now create the dock manager and its content
 	d->DockManager = new CDockManager(this);
 

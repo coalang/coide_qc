@@ -407,18 +407,8 @@ void CDockWidgetTab::contextMenuEvent(QContextMenuEvent* ev)
 
 	d->GlobalDragStartMousePosition = ev->globalPos();
 	QMenu Menu(this);
-
-    const bool isFloatable = d->DockWidget->features().testFlag(CDockWidget::DockWidgetFloatable);
-    const bool isNotOnlyTabInContainer =  !d->DockArea->dockContainer()->hasTopLevelDockWidget();
-
-    const bool isDetachable = isFloatable && isNotOnlyTabInContainer;
-
-	auto Action = Menu.addAction(tr("Detach"), this, SLOT(detachDockWidget()));
-    Action->setEnabled(isDetachable);
-	Menu.addSeparator();
-	Action = Menu.addAction(tr("Close"), this, SIGNAL(closeRequested()));
-	Action->setEnabled(isClosable());
-	Menu.addAction(tr("Close Others"), this, SIGNAL(closeOtherTabsRequested()));
+	auto contextMenuActions = createContextMenuActions(&Menu);
+    Menu.addActions(contextMenuActions);
 	Menu.exec(ev->globalPos());
 }
 
@@ -602,6 +592,49 @@ void CDockWidgetTab::onDockWidgetFeaturesChanged()
 }
 
 
+//============================================================================
+bool CDockWidgetTab::isDetachable() const
+{
+	const bool isFloatable = d->DockWidget->features().testFlag(CDockWidget::DockWidgetFloatable);
+	const bool isNotOnlyTabInContainer =  !d->DockArea->dockContainer()->hasTopLevelDockWidget();
+
+	return isFloatable && isNotOnlyTabInContainer;
+}
+
+
+//============================================================================
+QList<QAction*> CDockWidgetTab::createContextMenuActions(QWidget* parent)
+{
+	QList<QAction*> actions;
+
+	{
+		QAction* action = new QAction("Detach", parent);
+		connect(action, &QAction::triggered, this, &CDockWidgetTab::detachDockWidget);
+		action->setEnabled(isDetachable());
+		actions.append(action);
+	}
+
+	{
+		QAction* separatorAction = new QAction(parent);
+		separatorAction->setSeparator(true);
+		actions.append(separatorAction);
+	}
+
+	{
+		QAction* action = new QAction("Close", parent);
+		connect(action, &QAction::triggered, this, &CDockWidgetTab::closeRequested);
+		action->setEnabled(isClosable());
+		actions.append(action);
+	}
+
+	{
+		QAction* action = new QAction("Close Others", parent);
+		connect(action, &QAction::triggered, this, &CDockWidgetTab::closeOtherTabsRequested);
+		actions.append(action);
+	}
+
+	return actions;
+}
 
 
 } // namespace ads
