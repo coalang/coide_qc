@@ -204,6 +204,18 @@ public:
 
 
     /**
+     * If CDockManager::DockAreaHasCustomMenuButton flag is enabled, the dock
+     * area shows a menu button for display of a DockWidget specific menu for
+     * the current active dock widget.
+     * This policy enumerates, how the custom menu is created or filled.
+     */
+    enum eCustomMenuPolicy
+    {
+    	ContentWidgetActionsCustomMenu,//!< default - the menu shows the widgetActions of the content widget
+    	DockWidgetActionsCustomMenu,   //!< the menu shows the widgetActions of the dock widget
+    };
+
+    /**
      * This constructor creates a dock widget with the given title.
      * The title is the text that is shown in the window title when the dock
      * widget is floating and it is the title that is shown in the titlebar
@@ -400,6 +412,24 @@ public:
      * \see setToolBarIconSize()
      */
     QSize toolBarIconSize(eState State) const;
+
+    /**
+     * Sets the custom menu policy for the actions that will be shown in
+     * the dock area custom menu if it is enabled
+     */
+    void setCustomMenuPolicy(eCustomMenuPolicy Policy);
+
+    /**
+     * Returns the custom menu policy for this dock widget
+     */
+    eCustomMenuPolicy customMenuPolicy() const;
+
+    /**
+     * Returns the custom menu actions depending on the configured policy.
+     * A derived class may ignore the policy and return its own list of
+     * actions.
+     */
+    virtual QList<QAction*> customMenuActions() const;
 
 
 #ifndef QT_NO_TOOLTIP

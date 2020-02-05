@@ -80,6 +80,7 @@ struct DockWidgetPrivate
 	QSize ToolBarIconSizeDocked = QSize(16, 16);
 	QSize ToolBarIconSizeFloating = QSize(24, 24);
 	bool IsFloatingTopLevel = false;
+	CDockWidget::eCustomMenuPolicy CustomMenuPolicy = CDockWidget::ContentWidgetActionsCustomMenu;
 
 	/**
 	 * Private data constructor
@@ -814,6 +815,41 @@ bool CDockWidget::closeDockWidgetInternal(bool ForceClose)
     }
 
 	return true;
+}
+
+
+
+//============================================================================
+void CDockWidget::setCustomMenuPolicy(eCustomMenuPolicy Policy)
+{
+	d->CustomMenuPolicy = Policy;
+}
+
+
+//============================================================================
+CDockWidget::eCustomMenuPolicy CDockWidget::customMenuPolicy() const
+{
+	return d->CustomMenuPolicy;
+}
+
+
+//============================================================================
+QList<QAction*> CDockWidget::customMenuActions() const
+{
+	QList<QAction*> Actions;
+	if (CDockWidget::ContentWidgetActionsCustomMenu == d->CustomMenuPolicy)
+	{
+		if (d->Widget)
+		{
+			Actions = d->Widget->actions();
+		}
+	}
+	else
+	{
+		Actions = this->actions();
+	}
+
+	return Actions;
 }
 
 

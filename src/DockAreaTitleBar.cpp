@@ -472,14 +472,7 @@ void CDockAreaTitleBar::onCustomMenuAboutToShow()
 		return;
 	}
 
-	QWidget* currentContentWidget = currentDockWidget->widget();
-	if (!currentContentWidget)
-	{
-		return;
-	}
-
-	menu->addActions(currentContentWidget->actions());
-
+	menu->addActions(currentDockWidget->customMenuActions());
 	if (!menu->actions().isEmpty())
 	{
 		menu->addSeparator();

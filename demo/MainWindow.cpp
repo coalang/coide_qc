@@ -179,6 +179,10 @@ static ads::CDockWidget* createEditorWidget(QMenu* ViewMenu)
 	DockWidget->setWidget(w);
 	DockWidget->setIcon(svgIcon(":/adsdemo/images/edit.svg"));
 	DockWidget->setFeature(ads::CDockWidget::CustomCloseHandling, true);
+	DockWidget->setCustomMenuPolicy(ads::CDockWidget::ContentWidgetActionsCustomMenu);
+	QAction* ClearAction = new QAction(QObject::tr("Clear Editor"));
+	w->connect(ClearAction, SIGNAL(triggered()), SLOT(clear()));
+	w->addAction(ClearAction);
 	ViewMenu->addAction(DockWidget->toggleViewAction());
 	return DockWidget;
 }
