@@ -180,8 +180,8 @@ CFloatingDragPreview::CFloatingDragPreview(QWidget* Content, QWidget* parent) :
 	else
 	{
 		setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
-		setAttribute(Qt::WA_NoSystemBackground);
-		setAttribute(Qt::WA_TranslucentBackground);
+		//setAttribute(Qt::WA_NoSystemBackground);
+		//setAttribute(Qt::WA_TranslucentBackground);
 	}
 
 #ifdef Q_OS_LINUX
@@ -190,7 +190,7 @@ CFloatingDragPreview::CFloatingDragPreview(QWidget* Content, QWidget* parent) :
     setWindowFlags(Flags);
 #endif
 
-	setWindowOpacity(0.6);
+	//setWindowOpacity(0.6);
 
 	// Create a static image of the widget that should get undocked
 	// This is like some kind preview image like it is uses in drag and drop

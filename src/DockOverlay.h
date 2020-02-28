@@ -247,9 +247,14 @@ public:
 	 */
     void setIconColors(const QString& Colors);
 
+    /**
+     * Helper function to access the internal area widgets
+     */
+    QList<QWidget*> dropIndicatorWidgets() const;
+
 protected:
 	virtual void showEvent(QShowEvent* e) override;
-	void setAreaWidgets(const QHash<DockWidgetArea, QWidget*>& widgets);
+	void setDropIndicatorWidgets(const QHash<DockWidgetArea, QWidget*>& widgets);
 }; // CDockOverlayCross
 
 } // namespace ads
