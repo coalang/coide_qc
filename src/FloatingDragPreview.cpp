@@ -197,7 +197,7 @@ CFloatingDragPreview::CFloatingDragPreview(QWidget* Content, QWidget* parent) :
     Flags |= Qt::WindowStaysOnTopHint | Qt::X11BypassWindowManagerHint;
     setWindowFlags(Flags);
 #endif
-
+    setWindowFlag(Qt::WindowStaysOnTopHint, true);
 	//setWindowOpacity(0.6);
 
 	// Create a static image of the widget that should get undocked

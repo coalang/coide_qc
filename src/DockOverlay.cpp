@@ -60,6 +60,11 @@ struct DockOverlayPrivate
 	QRect DropAreaRect;
 	QFrame* DropOverlay;
 
+	void setOverlayParent(QWidget* parent)
+	{
+		DropOverlay->setParent(parent);
+	}
+
 	/**
 	 * Private data constructor
 	 */
@@ -398,17 +403,25 @@ CDockOverlay::CDockOverlay(QWidget* parent, eMode Mode) :
 #else
 	setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
 #endif
-	setWindowOpacity(1);
+	setWindowOpacity(0.0);
 	setWindowTitle("DockOverlay");
 	setAttribute(Qt::WA_NoSystemBackground);
 	setAttribute(Qt::WA_TranslucentBackground);
-	d->DropOverlay = new QFrame();
+
+	/*d->DropOverlay = new QFrame();
 	d->DropOverlay->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
 	//QColor color = this->palette().highlight().color();
 	QColor color = Qt::red;
 	d->DropOverlay->setStyleSheet(QString("background: %1; border: 1px solid %2;").arg(
-		color.lighter(150).name(QColor::HexArgb)).arg(color.name()));
+		color.lighter(150).name(QColor::HexArgb)).arg(color.name()));*/
 	//d->DropOverlay->setVisible(false);
+
+	d->DropOverlay = new QFrame(this);
+	//QColor color = this->palette().highlight().color();
+	QColor color = Qt::red;
+	color.setAlpha(64);
+	d->DropOverlay->setStyleSheet(QString("background: %1; border: 1px solid %2;").arg(
+		color.name(QColor::HexArgb)).arg(color.name()));
 
 	d->Cross->setVisible(false);
 	setVisible(false);
@@ -474,6 +487,9 @@ DockWidgetArea CDockOverlay::showOverlay(QWidget* target)
 		DockWidgetArea da = dropAreaUnderCursor();
 		if (da != d->LastLocation)
 		{
+			d->DropOverlay->setParent(nullptr);
+			d->DropOverlay->setParent(target);
+			d->DropOverlay->setVisible(true);
 			update();
 			d->LastLocation = da;
 		}
@@ -494,8 +510,8 @@ DockWidgetArea CDockOverlay::showOverlay(QWidget* target)
 		auto tl = target->mapToGlobal(r.topLeft());
 		auto br = target->mapToGlobal(r.bottomRight());
 		auto gr = QRect(tl, br);
-		d->DropOverlay->setGeometry(gr);
-		d->DropOverlay->setVisible(true);
+		d->DropOverlay->setGeometry(r);
+		//d->DropOverlay->setVisible(true);
 		return da;
 	}
 
@@ -531,6 +547,7 @@ void CDockOverlay::hideOverlay()
 {
 	std::cout << "CDockOverlay::hideOverlay" << std::endl;
 	hide();
+	d->DropOverlay->hide();
 	if (d->TargetWidget)
 	{
 		std::cout << "d->TargetWidget->repaint();" << std::endl;
