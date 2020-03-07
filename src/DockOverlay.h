@@ -87,6 +87,11 @@ public:
 	DockWidgetArea showOverlay(QWidget* target);
 
 	/**
+	 * Returns the widget that is overlayed
+	 */
+	QWidget* targetWidget() const;
+
+	/**
 	 * Hides the overlay
 	 */
 	void hideOverlay();
@@ -250,7 +255,10 @@ public:
     /**
      * Helper function to access the internal area widgets
      */
-    QList<QWidget*> dropIndicatorWidgets() const;
+    QHash<DockWidgetArea, QWidget*> dropIndicatorWidgets() const;
+
+    void showCross();
+    void hideCross();
 
 protected:
 	virtual void showEvent(QShowEvent* e) override;

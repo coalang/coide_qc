@@ -59,41 +59,11 @@ struct DockOverlayPrivate
 	CDockOverlay::eMode Mode = CDockOverlay::ModeDockAreaOverlay;
 	QRect DropAreaRect;
 	QFrame* DropOverlay;
-	QList<QLabel*> DropIndicatorIcons;
-	QList<QWidget*> CrossDropIndicators;
 
 	/**
 	 * Private data constructor
 	 */
 	DockOverlayPrivate(CDockOverlay* _public) : _this(_public) {}
-
-	void setIndicatorParent(QWidget* parent)
-	{
-		for (auto DropIndicator : DropIndicatorIcons)
-		{
-			DropIndicator->setParent(parent);
-			DropIndicator->setVisible(parent != nullptr);
-		}
-	}
-
-	void setOverlayAndIndicatorParent(QWidget* parent)
-	{
-		DropOverlay->setParent(parent);
-		for (auto DropIndicator : DropIndicatorIcons)
-		{
-			DropIndicator->setParent(parent);
-		}
-	}
-
-	void setOverlayAndIndicatorVisibility(bool Visible)
-	{
-		DropOverlay->setVisible(Visible);
-		auto CrossDropIcons = Cross->dropIndicatorWidgets();
-		for (int i = 0; i < DropIndicatorIcons.count(); ++i)
-		{
-			DropIndicatorIcons[i]->setVisible(Visible && !CrossDropIcons[i]->isHidden());
-		}
-	}
 };
 
 /**
@@ -105,6 +75,7 @@ struct DockOverlayCrossPrivate
 	CDockOverlay::eMode Mode = CDockOverlay::ModeDockAreaOverlay;
 	CDockOverlay* DockOverlay;
 	QHash<DockWidgetArea, QWidget*> DropIndicatorWidgets;
+	QHash<DockWidgetArea, QWidget*> LinuxDropIndicatorWidgets;
 	QGridLayout* GridLayout;
 	QColor IconColors[5];
 	bool UpdateRequired = false;
@@ -203,7 +174,7 @@ struct DockOverlayCrossPrivate
 
 		l->setPixmap(createHighDpiDropIndicatorPixmap(size, DockWidgetArea, Mode));
 		l->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
-		//l->setAttribute(Qt::WA_TranslucentBackground);
+		l->setAttribute(Qt::WA_TranslucentBackground);
 		l->setProperty("dockWidgetArea", DockWidgetArea);
 		return l;
 	}
@@ -355,6 +326,63 @@ struct DockOverlayCrossPrivate
 		return pm;
 	}
 
+	void layoutAreaOverlayIcons()
+	{
+		auto TargetWidget = DockOverlay->targetWidget();
+		auto TopLeft = TargetWidget->mapToGlobal(TargetWidget->rect().topLeft());
+		auto BottomRight = TargetWidget->mapToGlobal(TargetWidget->rect().bottomRight());
+		auto r = QRect(TopLeft, BottomRight);
+		auto cw = LinuxDropIndicatorWidgets[CenterDockWidgetArea];
+		cw->move(r.center() - cw->rect().center());
+
+		auto lw = LinuxDropIndicatorWidgets[LeftDockWidgetArea];
+		lw->move(cw->pos().x() - lw->width(), cw->pos().y());
+
+		auto rw = LinuxDropIndicatorWidgets[RightDockWidgetArea];
+		rw->move(cw->geometry().right() + 1, cw->pos().y());
+
+		auto tw = LinuxDropIndicatorWidgets[TopDockWidgetArea];
+		tw->move(cw->pos().x(), cw->pos().y() - lw->height());
+
+		auto bw = LinuxDropIndicatorWidgets[BottomDockWidgetArea];
+		bw->move(cw->pos().x(), cw->geometry().bottom() + 1);
+	}
+
+	void layoutContainerOverlayIcons()
+	{
+		const int Margin = 4;
+		auto TargetWidget = DockOverlay->targetWidget();
+		auto TopLeft = TargetWidget->mapToGlobal(TargetWidget->rect().topLeft());
+		auto BottomRight = TargetWidget->mapToGlobal(TargetWidget->rect().bottomRight());
+		auto r = QRect(TopLeft, BottomRight);
+		auto cw = LinuxDropIndicatorWidgets[CenterDockWidgetArea];
+		cw->move(r.center() - cw->rect().center());
+
+		auto lw = LinuxDropIndicatorWidgets[LeftDockWidgetArea];
+		lw->move(r.left() + Margin, cw->pos().y());
+
+		auto rw = LinuxDropIndicatorWidgets[RightDockWidgetArea];
+		rw->move(r.right() - rw->width() - Margin, cw->pos().y());
+
+		auto tw = LinuxDropIndicatorWidgets[TopDockWidgetArea];
+		tw->move(cw->pos().x(), r.top() + Margin);
+
+		auto bw = LinuxDropIndicatorWidgets[BottomDockWidgetArea];
+		bw->move(cw->pos().x(), r.bottom() - bw->height() - Margin);
+	}
+
+	void layoutOverlayIcons()
+	{
+		if (CDockOverlay::ModeDockAreaOverlay == Mode)
+		{
+			layoutAreaOverlayIcons();
+		}
+		else
+		{
+			layoutContainerOverlayIcons();
+		}
+	}
+
 };
 
 
@@ -370,17 +398,17 @@ CDockOverlay::CDockOverlay(QWidget* parent, eMode Mode) :
 #else
 	setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
 #endif
-	setStyleSheet("border: 2px solid red; background: none;");
+	setWindowOpacity(1);
 	setWindowTitle("DockOverlay");
-	//setAttribute(Qt::WA_NoSystemBackground);
-	//setAttribute(Qt::WA_TranslucentBackground);
-	setWindowOpacity(0.0);
-	d->DropOverlay = new QFrame(this);
+	setAttribute(Qt::WA_NoSystemBackground);
+	setAttribute(Qt::WA_TranslucentBackground);
+	d->DropOverlay = new QFrame();
+	d->DropOverlay->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
 	//QColor color = this->palette().highlight().color();
 	QColor color = Qt::red;
-	color.setAlpha(64);
 	d->DropOverlay->setStyleSheet(QString("background: %1; border: 1px solid %2;").arg(
-		color.name(QColor::HexArgb)).arg(color.name()));
+		color.lighter(150).name(QColor::HexArgb)).arg(color.name()));
+	//d->DropOverlay->setVisible(false);
 
 	d->Cross->setVisible(false);
 	setVisible(false);
@@ -446,9 +474,6 @@ DockWidgetArea CDockOverlay::showOverlay(QWidget* target)
 		DockWidgetArea da = dropAreaUnderCursor();
 		if (da != d->LastLocation)
 		{
-			d->setOverlayAndIndicatorParent(nullptr);
-			d->setOverlayAndIndicatorParent(target);
-			d->setOverlayAndIndicatorVisibility(true);
 			update();
 			d->LastLocation = da;
 		}
@@ -466,19 +491,16 @@ DockWidgetArea CDockOverlay::showOverlay(QWidget* target)
 		case CenterDockWidgetArea: r = rect();break;
 		default: r = QRect();
 		}
-		d->DropOverlay->setGeometry(r);
+		auto tl = target->mapToGlobal(r.topLeft());
+		auto br = target->mapToGlobal(r.bottomRight());
+		auto gr = QRect(tl, br);
+		d->DropOverlay->setGeometry(gr);
+		d->DropOverlay->setVisible(true);
 		return da;
 	}
 
-	std::cout << ((d->Mode == CDockOverlay::ModeContainerOverlay) ? "Container " : "DockArea: ")
-		<< "d->TargetWidget != target " << target << std::endl;
-	d->setIndicatorParent(nullptr);
-	d->setIndicatorParent(target);
-
 	if (d->TargetWidget)
 	{
-		std::cout << "d->TargetWidget->repaint();" << std::endl;
-		d->setOverlayAndIndicatorVisibility(false);
 		d->TargetWidget->update();
 	}
 	d->TargetWidget = target;
@@ -491,17 +513,16 @@ DockWidgetArea CDockOverlay::showOverlay(QWidget* target)
 	show();
 	d->Cross->updatePosition();
 	d->Cross->updateOverlayIcons();
-
-	auto CrossDropIndicators = d->Cross->dropIndicatorWidgets();
-	std::cout << "CrossDropIndicators count: " << CrossDropIndicators.count()
-		<< "d->DropIndicatorIcons count: " << d->DropIndicatorIcons.count() << std::endl;
-	for (int i = 0; i < CrossDropIndicators.count(); ++i)
-	{
-		d->DropIndicatorIcons[i]->setGeometry(CrossDropIndicators[i]->geometry());
-		d->DropIndicatorIcons[i]->setVisible(!CrossDropIndicators[i]->isHidden());
-	}
+	d->Cross->showCross();
 	update();
 	return dropAreaUnderCursor();
+}
+
+
+//============================================================================
+QWidget* CDockOverlay::targetWidget() const
+{
+	return d->TargetWidget;
 }
 
 
@@ -510,7 +531,6 @@ void CDockOverlay::hideOverlay()
 {
 	std::cout << "CDockOverlay::hideOverlay" << std::endl;
 	hide();
-	d->setOverlayAndIndicatorVisibility(false);
 	if (d->TargetWidget)
 	{
 		std::cout << "d->TargetWidget->repaint();" << std::endl;
@@ -519,6 +539,7 @@ void CDockOverlay::hideOverlay()
 	d->TargetWidget.clear();
 	d->LastLocation = InvalidDockWidgetArea;
 	d->DropAreaRect = QRect();
+	d->Cross->hideCross();
 }
 
 
@@ -549,7 +570,7 @@ void CDockOverlay::paintEvent(QPaintEvent* event)
 		return;
 	}
 
-	/*QRect r = rect();
+	QRect r = rect();
 	const DockWidgetArea da = dropAreaUnderCursor();
 	double Factor = (CDockOverlay::ModeContainerOverlay == d->Mode) ?
 		3 : 2;
@@ -575,7 +596,7 @@ void CDockOverlay::paintEvent(QPaintEvent* event)
     Color.setAlpha(64);
     painter.setBrush(Color);
 	painter.drawRect(r.adjusted(0, 0, -1, -1));
-	d->DropAreaRect = r;*/
+	d->DropAreaRect = r;
 }
 
 
@@ -609,19 +630,6 @@ bool CDockOverlay::event(QEvent *e)
 	if (e->type() == QEvent::Polish)
 	{
 		d->Cross->setupOverlayCross(d->Mode);
-
-		QColor color = Qt::red;
-		color.setAlpha(64);
-		d->CrossDropIndicators = d->Cross->dropIndicatorWidgets();
-		for (auto CrossDropIndicator : d->CrossDropIndicators)
-		{
-			std::cout << "Create drop Indicator" << std::endl;
-			auto DropIcon = new QLabel(this);
-			DropIcon->setStyleSheet(QString("background: %1; border: 1px solid %2;").arg(
-				QColor(Qt::white).name(QColor::HexArgb)).arg(color.name()));
-			DropIcon->resize(QSize(64, 64));
-			d->DropIndicatorIcons.append(DropIcon);
-		}
 	}
 	return Result;
 }
@@ -685,8 +693,7 @@ CDockOverlayCross::CDockOverlayCross(CDockOverlay* overlay) :
 	setWindowFlags(Qt::Tool | Qt::FramelessWindowHint);
 #endif
 	setWindowTitle("DockOverlayCross");
-	setWindowOpacity(0.0);
-	//setAttribute(Qt::WA_TranslucentBackground);
+	setAttribute(Qt::WA_TranslucentBackground);
 
 	d->GridLayout = new QGridLayout();
 	d->GridLayout->setSpacing(0);
@@ -773,6 +780,21 @@ void CDockOverlayCross::setDropIndicatorWidgets(const QHash<DockWidgetArea, QWid
 
 	// Insert new widgets into grid.
 	d->DropIndicatorWidgets = widgets;
+
+	QColor color = Qt::red;
+	color.setAlpha(64);
+	QSize size = widgets.values()[0]->sizeHint();
+	auto it = d->DropIndicatorWidgets.begin();
+	for (; it != d->DropIndicatorWidgets.end(); ++it)
+	{
+		auto DropIcon = new QLabel();
+		DropIcon->setWindowFlags(Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+		DropIcon->setStyleSheet(QString("background: %1; border: 1px solid %2;").arg(
+			QColor(Qt::white).name(QColor::HexArgb)).arg(color.name()));
+		DropIcon->resize(size);
+		d->LinuxDropIndicatorWidgets[it.key()] = DropIcon;
+	}
+
 	QHashIterator<DockWidgetArea, QWidget*> i2(d->DropIndicatorWidgets);
 	while (i2.hasNext())
 	{
@@ -818,9 +840,29 @@ void CDockOverlayCross::setDropIndicatorWidgets(const QHash<DockWidgetArea, QWid
 
 
 //============================================================================
-QList<QWidget*> CDockOverlayCross::dropIndicatorWidgets() const
+void CDockOverlayCross::showCross()
 {
-	return d->DropIndicatorWidgets.values();
+	for (auto DropIndicatorWidget : d->LinuxDropIndicatorWidgets)
+	{
+		DropIndicatorWidget->setVisible(true);
+	}
+}
+
+
+//============================================================================
+void CDockOverlayCross::hideCross()
+{
+	for (auto DropIndicatorWidget : d->LinuxDropIndicatorWidgets)
+	{
+		DropIndicatorWidget->setVisible(false);
+	}
+}
+
+
+//============================================================================
+QHash<DockWidgetArea, QWidget*> CDockOverlayCross::dropIndicatorWidgets() const
+{
+	return d->DropIndicatorWidgets;
 }
 
 
@@ -864,6 +906,7 @@ void CDockOverlayCross::updatePosition()
 		(this->height() - d->DockOverlay->height()) / 2);
 	QPoint CrossTopLeft = TopLeft - Offest;
 	move(CrossTopLeft);
+	d->layoutOverlayIcons();
 }
 
 
@@ -919,7 +962,6 @@ QString CDockOverlayCross::iconColors() const
 {
 	return QString();
 }
-
 
 
 } // namespace ads
